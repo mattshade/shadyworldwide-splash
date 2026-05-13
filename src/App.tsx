@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, useSpring, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
-import { X, Send, ArrowRight } from 'lucide-react';
+import { X, Send, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
 
 // --- Sub-components ---
 
@@ -124,6 +124,40 @@ const InteractiveButton = ({ onClick, children, className = "", isExternal = fal
 };
 
 const ContactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) => {
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setStatus('submitting');
+    
+    const formData = new FormData(e.currentTarget);
+    const data: Record<string, string> = {};
+    formData.forEach((value, key) => {
+      data[key] = value.toString();
+    });
+
+    try {
+      const response = await fetch("/", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams(data).toString(),
+      });
+      
+      if (response.ok) {
+        setStatus('success');
+        setTimeout(() => {
+          onClose();
+          setStatus('idle');
+        }, 2000);
+      } else {
+        setStatus('error');
+      }
+    } catch (error) {
+      console.error("Form submission error:", error);
+      setStatus('error');
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -133,18 +167,55 @@ const ContactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
             <div className="relative z-10 text-white">
               <div className="flex justify-between items-start mb-12">
                 <div>
-                  <h2 className="text-lg md:text-xl font-bold tracking-[0.4em] uppercase mb-1">Contact</h2>
-                  <p className="font-mono text-[8px] text-white/20 tracking-[0.4em] uppercase">Established connection...</p>
+                  <h2 className="text-lg md:text-xl font-bold tracking-[0.4em] uppercase mb-1">
+                    {status === 'success' ? 'Transmission Complete' : status === 'error' ? 'Transmission Failed' : 'Contact'}
+                  </h2>
+                  <p className="font-mono text-[8px] text-white/20 tracking-[0.4em] uppercase">
+                    {status === 'success' ? 'Message received successfully.' : status === 'error' ? 'Please retry connection.' : 'Established connection...'}
+                  </p>
                 </div>
                 <button onClick={onClose} className="p-2 -mr-2 text-white/20 hover:text-white transition-colors"><X size={16} /></button>
               </div>
-              <form name="contact" method="POST" data-netlify="true" className="space-y-10">
-                <input type="hidden" name="form-name" value="contact" />
-                <div className="space-y-4 group"><label className="block font-mono text-[8px] text-white/30 tracking-widest uppercase">Identity</label><input required name="name" type="text" placeholder="NAME" className="w-full bg-transparent border-b border-white/5 py-2 font-mono text-xs focus:outline-none focus:border-white/30 transition-all placeholder:text-white/5" /></div>
-                <div className="space-y-4 group"><label className="block font-mono text-[8px] text-white/30 tracking-widest uppercase">Coordinates</label><input required name="email" type="email" placeholder="EMAIL" className="w-full bg-transparent border-b border-white/5 py-2 font-mono text-xs focus:outline-none focus:border-white/30 transition-all placeholder:text-white/5" /></div>
-                <div className="space-y-4 group"><label className="block font-mono text-[8px] text-white/30 tracking-widest uppercase">Transmission</label><textarea required name="message" rows={3} placeholder="MESSAGE..." className="w-full bg-transparent border border-white/5 p-4 font-mono text-xs focus:outline-none focus:border-white/30 transition-all placeholder:text-white/5 resize-none" /></div>
-                <button type="submit" className="w-full group relative py-4 overflow-hidden border border-white/10 hover:border-white/30 transition-colors"><span className="relative z-10 text-[9px] font-mono tracking-[0.6em] uppercase transition-colors group-hover:text-white flex items-center justify-center gap-3">Send <Send size={10} /></span></button>
-              </form>
+
+              {status === 'success' ? (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col items-center py-10 gap-4">
+                  <CheckCircle size={40} className="text-white/40" />
+                  <p className="font-mono text-[10px] tracking-widest text-white/40 uppercase">Closing Secure Channel...</p>
+                </motion.div>
+              ) : (
+                <form onSubmit={handleSubmit} name="contact" className="space-y-10">
+                  <input type="hidden" name="form-name" value="contact" />
+                  <div className="space-y-4 group">
+                    <label className="block font-mono text-[8px] text-white/30 tracking-widest uppercase">Identity</label>
+                    <input required name="name" type="text" placeholder="NAME" className="w-full bg-transparent border-b border-white/5 py-2 font-mono text-xs focus:outline-none focus:border-white/30 transition-all placeholder:text-white/5" />
+                  </div>
+                  <div className="space-y-4 group">
+                    <label className="block font-mono text-[8px] text-white/30 tracking-widest uppercase">Coordinates</label>
+                    <input required name="email" type="email" placeholder="EMAIL" className="w-full bg-transparent border-b border-white/5 py-2 font-mono text-xs focus:outline-none focus:border-white/30 transition-all placeholder:text-white/5" />
+                  </div>
+                  <div className="space-y-4 group">
+                    <label className="block font-mono text-[8px] text-white/30 tracking-widest uppercase">Transmission</label>
+                    <textarea required name="message" rows={3} placeholder="MESSAGE..." className="w-full bg-transparent border border-white/5 p-4 font-mono text-xs focus:outline-none focus:border-white/30 transition-all placeholder:text-white/5 resize-none" />
+                  </div>
+                  
+                  <div className="flex flex-col gap-4">
+                    {status === 'error' && (
+                      <div className="flex items-center gap-2 text-red-500/60 font-mono text-[8px] uppercase tracking-widest">
+                        <AlertCircle size={12} /> Connection error. Try again.
+                      </div>
+                    )}
+                    <button 
+                      disabled={status === 'submitting'}
+                      type="submit" 
+                      className="w-full group relative py-4 overflow-hidden border border-white/10 hover:border-white/30 transition-colors disabled:opacity-50"
+                    >
+                      <span className="relative z-10 text-[9px] font-mono tracking-[0.6em] uppercase transition-colors group-hover:text-white flex items-center justify-center gap-3">
+                        {status === 'submitting' ? 'Transmitting...' : 'Send'} <Send size={10} />
+                      </span>
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           </motion.div>
         </div>
