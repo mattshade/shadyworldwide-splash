@@ -1,0 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  
+  --color-background: #000000;
+  --color-foreground: #FFFFFF;
+  
+  --tracking-mega-wide: 0.6em;
+  --tracking-ultra-wide: 0.4em;
+
+  --breakpoint-xs: 480px;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  background-color: #000000;
+  color: #ffffff;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* Prevent pull-to-refresh and other mobile overscroll behaviors */
+  overscroll-behavior: none;
+}
+
+/* Custom Utilities */
+.perspective-grid {
+  perspective: 2000px; /* Increased for deeper 3D feel */
+  transform-style: preserve-3d;
+}
+
+.grid-plane {
+  background-image: 
+    linear-gradient(to right, rgba(255,255,255,0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size: 80px 80px;
+  transform: rotateX(65deg);
+  width: 400%;
+  height: 400%;
+}
+
+@media (min-width: 768px) {
+  .grid-plane {
+    background-size: 100px 100px;
+  }
+}
+
+.blueprint-line {
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 0.5;
+}
+
+.origami-stroke {
+  stroke: rgba(255, 255, 255, 0.9);
+  stroke-width: 0.6;
+  fill: none;
+}
+
+/* Custom scrollbar for modal content */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
