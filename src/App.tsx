@@ -185,6 +185,7 @@ const ContactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
               ) : (
                 <form onSubmit={handleSubmit} name="contact" className="space-y-10">
                   <input type="hidden" name="form-name" value="contact" />
+                  <p className="hidden"><label>Don't fill this out if you're human: <input name="bot-field" /></label></p>
                   <div className="space-y-4 group">
                     <label className="block font-mono text-[8px] text-white/30 tracking-widest uppercase">Identity</label>
                     <input required name="name" type="text" placeholder="NAME" className="w-full bg-transparent border-b border-white/5 py-2 font-mono text-xs focus:outline-none focus:border-white/30 transition-all placeholder:text-white/5" />
