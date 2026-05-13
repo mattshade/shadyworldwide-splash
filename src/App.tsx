@@ -132,18 +132,18 @@ const ContactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
     
     const form = e.currentTarget;
     const formData = new FormData(form);
-    
-    // Explicitly encode for Netlify
-    const body = new URLSearchParams();
-    body.append("form-name", "contact");
-    formData.forEach((value, key) => {
-      body.append(key, value.toString());
-    });
 
-    // POST to "/" returns 404 on Netlify: the SPA rewrite serves index.html for GET
-    // but POST has no static handler. POSTing to /index.html hits the built file so
-    // Netlify Forms can accept the submission.
-    const formAction = new URL("index.html", `${window.location.origin}${import.meta.env.BASE_URL}`).pathname;
+    const body = new URLSearchParams();
+    for (const [key, value] of formData.entries()) {
+      body.append(key, value.toString());
+    }
+
+    // POST to "/" or "/index.html" often 404s with SPA `/* -> /index.html` + Pretty URLs.
+    // POST to this dedicated static file path (shadowed from the catch-all) so Netlify Forms receives it.
+    const formAction = new URL(
+      "netlify-form-contact.html",
+      `${window.location.origin}${import.meta.env.BASE_URL}`,
+    ).pathname;
 
     try {
       const response = await fetch(formAction, {
