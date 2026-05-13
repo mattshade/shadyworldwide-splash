@@ -1,15 +1,41 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SHADY WORLDWIDE | Visual Engineering</title>
-    <meta name="description" content="Design systems, interfaces, experiments, and engineered visual culture." />
-  </head>
-  <body class="bg-black">
-    <div id="root"></div>
-    <!-- Netlify form blueprint lives in public/netlify-form-contact.html (copied to dist root). -->
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SHADY WORLDWIDE | Visual Engineering</title>
+  <meta name="description" content="Design systems, interfaces, experiments, and engineered visual culture." />
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://shadyworldwide.com/" />
+  <meta property="og:title" content="SHADY WORLDWIDE | Visual Engineering" />
+  <meta property="og:description" content="Design systems, interfaces, experiments, and engineered visual culture." />
+  <meta property="og:image" content="https://shadyworldwide.com/og-image.png" />
+
+  <!-- Twitter -->
+  <meta property="twitter:card" content="summary_large_image" />
+  <meta property="twitter:url" content="https://shadyworldwide.com/" />
+  <meta property="twitter:title" content="SHADY WORLDWIDE | Visual Engineering" />
+  <meta property="twitter:description"
+    content="Design systems, interfaces, experiments, and engineered visual culture." />
+  <meta property="twitter:image" content="https://shadyworldwide.com/og-image.png" />
+</head>
+
+<body class="bg-black">
+  <div id="root"></div>
+
+  <!-- Hidden form for Netlify Bot discovery -->
+  <form name="contact" data-netlify="true" netlify-honeypot="bot-field" hidden>
+    <input type="text" name="bot-field" />
+    <input type="text" name="name" />
+    <input type="email" name="email" />
+    <textarea name="message"></textarea>
+  </form>
+
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+
 </html>
