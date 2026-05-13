@@ -130,17 +130,21 @@ const ContactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
     e.preventDefault();
     setStatus('submitting');
     
-    const formData = new FormData(e.currentTarget);
-    const data: Record<string, string> = {};
+    const form = e.currentTarget;
+    const formData = new FormData(form);
+    
+    // Explicitly encode for Netlify
+    const body = new URLSearchParams();
+    body.append("form-name", "contact");
     formData.forEach((value, key) => {
-      data[key] = value.toString();
+      body.append(key, value.toString());
     });
 
     try {
       const response = await fetch("/", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams(data).toString(),
+        body: body.toString(),
       });
       
       if (response.ok) {
@@ -150,10 +154,12 @@ const ContactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
           setStatus('idle');
         }, 2000);
       } else {
+        const errorText = await response.text();
+        console.error("Netlify response error:", errorText);
         setStatus('error');
       }
     } catch (error) {
-      console.error("Form submission error:", error);
+      console.error("Form fetch error:", error);
       setStatus('error');
     }
   };
@@ -183,9 +189,11 @@ const ContactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
                   <p className="font-mono text-[10px] tracking-widest text-white/40 uppercase">Closing Secure Channel...</p>
                 </motion.div>
               ) : (
-                <form onSubmit={handleSubmit} name="contact" className="space-y-10">
+                <form onSubmit={handleSubmit} name="contact" data-netlify="true" netlify-honeypot="bot-field" className="space-y-10">
                   <input type="hidden" name="form-name" value="contact" />
-                  <p className="hidden"><label>Don't fill this out if you're human: <input name="bot-field" /></label></p>
+                  <p className="hidden">
+                    <label>Don't fill this out if you're human: <input name="bot-field" /></label>
+                  </p>
                   <div className="space-y-4 group">
                     <label className="block font-mono text-[8px] text-white/30 tracking-widest uppercase">Identity</label>
                     <input required name="name" type="text" placeholder="NAME" className="w-full bg-transparent border-b border-white/5 py-2 font-mono text-xs focus:outline-none focus:border-white/30 transition-all placeholder:text-white/5" />
