@@ -196,6 +196,7 @@ const ContactModal = ({ isOpen, onClose }: { isOpen: boolean, onClose: () => voi
               ) : (
                 <form onSubmit={handleSubmit} name="contact" data-netlify="true" netlify-honeypot="bot-field" className="space-y-10">
                   <input type="hidden" name="form-name" value="contact" />
+                  <input type="hidden" name="subject" value="SHADY WORLDWIDE - New contact (%{submissionId})" data-remove-prefix />
                   <p className="hidden">
                     <label>Don't fill this out if you're human: <input name="bot-field" /></label>
                   </p>

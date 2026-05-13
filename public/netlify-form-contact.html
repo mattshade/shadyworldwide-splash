@@ -8,6 +8,7 @@
     <!-- Static blueprint only: Netlify parses this at deploy. Submissions use fetch from the SPA. -->
     <form name="contact" method="post" data-netlify="true" netlify-honeypot="bot-field" hidden>
       <input type="hidden" name="form-name" value="contact" />
+      <input type="hidden" name="subject" value="SHADY WORLDWIDE - New contact (%{submissionId})" data-remove-prefix />
       <input type="text" name="bot-field" />
       <input type="text" name="name" />
       <input type="email" name="email" />
