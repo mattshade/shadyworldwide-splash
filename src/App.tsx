@@ -1,8 +1,24 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, useSpring, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
 import { X, Send, ArrowRight, CheckCircle, AlertCircle } from 'lucide-react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Float, PerspectiveCamera, Environment, ContactShadows } from '@react-three/drei';
+import * as THREE from 'three';
+import './App.css';
 
 // --- Sub-components ---
+
+const FilmGrain = () => (
+  <div className="pointer-events-none absolute inset-0 z-50 opacity-[0.12] mix-blend-overlay">
+    <svg width="100%" height="100%">
+      <filter id="noise">
+        <feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="3" stitchTiles="stitch" />
+        <feColorMatrix type="matrix" values="1 0 0 0 0, 0 1 0 0 0, 0 0 1 0 0, 0 0 0 0.5 0" />
+      </filter>
+      <rect width="100%" height="100%" filter="url(#noise)" />
+    </svg>
+  </div>
+);
 
 const TechnicalPattern = () => (
   <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.03]">
@@ -29,60 +45,100 @@ const TechnicalPattern = () => (
   </div>
 );
 
-const OrigamiBird = ({ delay = 0, speed = 35, initialX = 50, initialY = 50, scale = 1, parallaxStrength = 15, springX, springY, blur = 0, isLightning = false }: { 
-  delay?: number, speed?: number, initialX?: number, initialY?: number, scale?: number, parallaxStrength?: number, springX: any, springY: any, blur?: number, isLightning: boolean
-}) => {
-  const moveX = useTransform(springX, [-500, 500], [-parallaxStrength, parallaxStrength]);
-  const moveY = useTransform(springY, [-500, 500], [-parallaxStrength, parallaxStrength]);
-  const rotateZ = useTransform(springX, [-500, 500], [-5, 5]);
+const CraneGeometry = () => {
+  const vertices = useMemo(() => new Float32Array([
+    0, -0.2, 0,       // 0: Body Bottom
+    0, 0.4, 0,        // 1: Body Top
+    1.8, 0.5, 0,      // 2: Right Wing Tip
+    -1.8, 0.5, 0,     // 3: Left Wing Tip
+    0, 0.1, 0.8,      // 4: Body Front
+    0, 0.1, -0.8,     // 5: Body Back
+    0, 1.2, -1.8,     // 6: Tail Tip
+    0, 1.2, 1.6,      // 7: Neck Tip
+    0, 0.9, 1.9       // 8: Head Beak
+  ]), []);
+
+  const indices = useMemo(() => new Uint16Array([
+    1, 2, 4,  1, 5, 2,  0, 4, 2,  0, 2, 5, // Right Wing
+    1, 4, 3,  1, 3, 5,  0, 3, 4,  0, 5, 3, // Left Wing
+    1, 5, 6,  0, 6, 5,                     // Tail
+    1, 7, 4,  0, 4, 7,                     // Neck
+    7, 8, 4                                // Head
+  ]), []);
 
   return (
-    <motion.div
-      style={{ 
-        position: 'absolute',
-        left: `${initialX}%`,
-        top: `${initialY}%`,
-        x: moveX,
-        y: moveY,
-        scale,
-        filter: blur > 0 ? `blur(${blur}px)` : 'none',
-        rotateZ
-      }}
-      initial={{ opacity: 0 }}
-      animate={{ 
-        opacity: isLightning ? [0.4, 0.7, 0.4] : 1 
-      }}
-      transition={{ duration: isLightning ? 1.5 : 3, delay: isLightning ? 0 : 0.5 }}
-      className="pointer-events-none z-10"
-    >
-      <motion.svg
-        viewBox="0 0 100 100"
-        className="w-16 h-16 md:w-32 md:h-32"
+    <bufferGeometry>
+      <bufferAttribute attach="attributes-position" args={[vertices, 3]} />
+      <bufferAttribute attach="index" args={[indices, 1]} />
+    </bufferGeometry>
+  );
+};
+
+const Bird3D = ({ position, rotation, scale, speed, isLightning }: any) => {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useFrame((state) => {
+    if (!meshRef.current) return;
+    const t = state.clock.getElapsedTime() * speed;
+    meshRef.current.rotation.y = Math.sin(t * 0.5) * 0.2 + rotation[1];
+    meshRef.current.position.y += Math.sin(t) * 0.005;
+    
+    const flap = Math.sin(t * 2) * 0.15;
+    meshRef.current.scale.x = scale * (1 + flap);
+  });
+
+  return (
+    <Float speed={2 * speed} rotationIntensity={0.5} floatIntensity={0.5}>
+      <mesh ref={meshRef} position={position} rotation={rotation} scale={scale}>
+        <CraneGeometry />
+        <meshStandardMaterial 
+          color={isLightning ? "#ff0000" : "#ffffff"} 
+          wireframe={true}
+          transparent={true}
+          opacity={isLightning ? 0.9 : 0.15}
+          emissive={isLightning ? "#ff0000" : "#000000"}
+          emissiveIntensity={isLightning ? 4 : 0}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    </Float>
+  );
+};
+
+const Scene3D = ({ isLightning, mouseX, mouseY }: any) => {
+  const { viewport } = useThree();
+  const birdPositions = useMemo(() => [
+    { pos: [-viewport.width * 0.35, viewport.height * 0.2, 0], rot: [0.2, 0.5, 0], scale: 0.8, speed: 0.8 },
+    { pos: [viewport.width * 0.35, viewport.height * 0.15, -2], rot: [-0.1, -0.4, 0.1], scale: 0.6, speed: 1.2 },
+    { pos: [viewport.width * 0.2, -viewport.height * 0.25, 2], rot: [0.4, 0.2, -0.2], scale: 1.1, speed: 0.7 },
+    { pos: [-viewport.width * 0.3, -viewport.height * 0.2, -1], rot: [-0.3, 0.8, 0.1], scale: 0.5, speed: 1.5 },
+  ], [viewport]);
+
+  return (
+    <>
+      <PerspectiveCamera makeDefault position={[0, 0, 10]} fov={35} />
+      <ambientLight intensity={isLightning ? 0.8 : 0.1} color={isLightning ? "#ff0000" : "#ffffff"} />
+      <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} intensity={isLightning ? 20 : 1} color={isLightning ? "#ff0033" : "#ffffff"} />
+      <pointLight position={[-10, -10, -10]} intensity={isLightning ? 15 : 0.5} color={isLightning ? "#00ffff" : "#ffffff"} />
+      
+      {/* @ts-ignore */}
+      <motion.group
         animate={{ 
-          y: [-8, 8, -8],
-          rotateX: [0, 8, 0],
-          rotateY: [0, 15, 0],
-          opacity: [0.2, 0.4, 0.2]
-        }}
-        transition={{ 
-          duration: speed, 
-          repeat: Infinity, 
-          ease: "easeInOut",
-          delay 
+          x: mouseX.get() * 0.005,
+          y: -mouseY.get() * 0.005,
+          rotateY: mouseX.get() * 0.0005,
+          rotateX: -mouseY.get() * 0.0005,
         }}
       >
-        <g className="origami-stroke" style={{ strokeWidth: 0.35 }}>
-          <path d="M50,50 L30,40 L15,50 L30,60 Z" />
-          <path d="M50,50 L70,40 L85,50 L70,60 Z" />
-          <path d="M30,40 L50,20 L70,40 Z" />
-          <path d="M30,60 L50,80 L70,60 Z" />
-          <path d="M30,40 L40,10 L50,30 Z" style={{ opacity: 0.6 }} />
-          <path d="M30,60 L40,90 L50,70 Z" style={{ opacity: 0.6 }} />
-          <path d="M15,50 L5,45 L10,50 L5,55 Z" />
-          <path d="M85,50 L95,45 L90,50 L95,55 Z" />
-        </g>
-      </motion.svg>
-    </motion.div>
+        {birdPositions.map((bird, i) => (
+          <Bird3D key={i} position={bird.pos} rotation={bird.rot} scale={bird.scale} speed={bird.speed} isLightning={isLightning} />
+        ))}
+      {/* @ts-ignore */}
+      </motion.group>
+
+      <Environment preset="night" />
+      <ContactShadows position={[0, -5, 0]} opacity={0.3} scale={20} blur={3} far={4.5} />
+    </>
   );
 };
 
@@ -256,11 +312,19 @@ export default function App() {
   
   const contentX = useTransform(springX, [-500, 500], [-8, 8]);
   const contentY = useTransform(springY, [-500, 500], [-10, 10]);
+  
+  const pageRotateX = useTransform(springY, [-500, 500], [4, -4]);
+  const pageRotateY = useTransform(springX, [-500, 500], [-4, 4]);
 
   const triggerLightning = useCallback(() => {
-    setLightningState('flashing');
-    setTimeout(() => setLightningState('idle'), 2500);
-    const nextStrike = Math.random() * 25000 + 35000;
+    const numBursts = 3 + Math.floor(Math.random() * 4);
+    let delay = 0;
+    for (let i = 0; i < numBursts; i++) {
+      setTimeout(() => setLightningState('flashing'), delay);
+      setTimeout(() => setLightningState('idle'), delay + 20 + Math.random() * 60);
+      delay += 50 + Math.random() * 120;
+    }
+    const nextStrike = Math.random() * 12000 + 8000;
     setTimeout(triggerLightning, nextStrike);
   }, []);
 
@@ -274,7 +338,7 @@ export default function App() {
       mouseY.set(y);
     };
     window.addEventListener('mousemove', handleMouseMove);
-    const initialDelay = Math.random() * 20000 + 15000;
+    const initialDelay = 5000;
     const timer = setTimeout(triggerLightning, initialDelay);
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
@@ -287,6 +351,14 @@ export default function App() {
   return (
     <div className="fixed inset-0 bg-black text-white selection:bg-white selection:text-black font-sans overflow-hidden touch-none">
       
+      <FilmGrain />
+      {isLightning && (
+        <div className="absolute inset-0 z-40 bg-white mix-blend-difference pointer-events-none opacity-80" />
+      )}
+      {isLightning && (
+        <div className="absolute inset-0 z-40 bg-red-600 mix-blend-color pointer-events-none opacity-30" />
+      )}
+      
       <TechnicalPattern />
 
       {/* Volumetric 3D Line Grid Background */}
@@ -294,7 +366,7 @@ export default function App() {
         <motion.div 
           style={{ rotateX: gridRotateX, rotateY: gridRotateY }} 
           animate={{ opacity: isLightning ? 0.3 : 0.1 }}
-          transition={{ duration: 2 }}
+          transition={{ duration: 0.2 }}
           className="relative w-[400vw] h-[400vh] flex items-center justify-center"
         >
           <div className="absolute inset-0 grid-plane" />
@@ -322,14 +394,21 @@ export default function App() {
       <TechnicalLabel text="SYSTEM ONLINE" position="bottom-8 left-8" />
       <TechnicalLabel text="VISUAL ENGINEERING" position="bottom-8 right-8" />
       
-      <OrigamiBird isLightning={isLightning} springX={springX} springY={springY} initialX={12} initialY={18} delay={0} scale={0.9} />
-      <OrigamiBird isLightning={isLightning} springX={springX} springY={springY} initialX={88} initialY={22} delay={5} scale={0.7} />
-      <OrigamiBird isLightning={isLightning} springX={springX} springY={springY} initialX={72} initialY={78} delay={10} scale={1.2} blur={1} />
-      <OrigamiBird isLightning={isLightning} springX={springX} springY={springY} initialX={18} initialY={72} delay={3} scale={0.5} />
+      <div className="absolute inset-0 z-10 pointer-events-none">
+        <Canvas dpr={[1, 2]} gl={{ antialias: true }}>
+          <Scene3D isLightning={isLightning} mouseX={mouseX} mouseY={mouseY} />
+        </Canvas>
+      </div>
 
-      <div className="absolute inset-0 flex flex-col items-center justify-center z-20 px-6">
+      <div className="absolute inset-0 flex flex-col items-center justify-center z-20 px-6" style={{ perspective: '1000px' }}>
         <motion.main 
-          style={{ x: contentX, y: contentY }} 
+          style={{ 
+            x: contentX, 
+            y: contentY,
+            rotateX: pageRotateX,
+            rotateY: pageRotateY,
+            transformStyle: "preserve-3d"
+          }} 
           className="flex flex-col items-center gap-10 w-full max-w-4xl pointer-events-auto"
         >
           <div className="relative group cursor-default flex flex-col items-center">
@@ -338,8 +417,9 @@ export default function App() {
                 opacity: isLightning ? [0.6, 1, 0.6] : 1,
                 textShadow: isLightning ? "0 0 40px rgba(255,255,255,0.2)" : "0 0 0px rgba(255,255,255,0)"
               }}
-              transition={{ duration: 2 }}
-              className="text-lg xs:text-xl md:text-2xl lg:text-3xl font-bold tracking-[0.8em] md:tracking-[1.2em] text-center leading-none md:whitespace-nowrap uppercase text-white/90"
+              transition={{ duration: 0.1 }}
+              className={`text-lg xs:text-xl md:text-2xl lg:text-3xl font-bold tracking-[0.8em] md:tracking-[1.2em] text-center leading-none md:whitespace-nowrap uppercase text-white/90 glitch-text ${isLightning ? 'glitch-active' : ''}`}
+              data-text="SHADY WORLDWIDE"
             >
               SHADY WORLDWIDE
             </motion.h1>
